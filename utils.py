@@ -1,8 +1,14 @@
+import re
+import string
+from typing import List, Union
+
 import nltk
 import pandas as pd
+from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import LabelEncoder
+
+english_stopwords = stopwords.words('english')
 
 
 def get_top_n_most_frequent_labels(df: pd.DataFrame, column_name: str, top_n: int) -> list:
@@ -35,60 +41,97 @@ class TextPreprocessor:
     """Text preprocessing methods.
     """
 
-    def clean_text(self, text: str) -> str:
-        """"Remove unnecessary characters from a given text.
-
-        It removes unnecessary whitespace and punctuation characters of a text.
-        Note: Not all of the punctuation characters are removed.
-
-        :param text: the given text
-        :returns: a text without the unnecessary whitespace and punctuation characters
-        """
-        text = text.replace('\r', ' ')
-        text = text.replace('\n', ' ')
-        text = text.replace('. ', ' ')
-        text = text.replace('!', ' ')
-        text = text.replace('"', ' ')
-        text = text.replace("'", ' ')
-        text = text.replace("$", ' ')
-        text = text.replace("#", ' ')
-        text = text.replace("/", ' ')
-        text = text.replace(";", ' ')
-        text = text.replace("`", ' ')
-        text = text.replace('  ', ' ')
-        return text
-
-    def stem_text(self, text: str) -> str:
-        """Stem word tokens of a given text.
-
-        nltk.stem.PorterStemmer is used as a stemmer.
-
-        :param text: the given text
-        :return: the given text with stemmed words
-        """
-        stemmer = PorterStemmer()
-        words = nltk.word_tokenize(text)
-        text = ' '.join([stemmer.stem(word) for word in words])
-        return text
-
-
-class FeatureExtractorGenerator:
-    def bag_of_words_vectorizer(self, df: pd.DataFrame, column_name: str, stop_words=None, max_df: float = 1.0,
-                                min_df: float = 1, ngram: tuple = (1, 1), binary: bool = False) -> CountVectorizer:
-        """Convert a column of a given pandas dataFrame into bag-of-words vectors.
-
-        This method wraps the CountVectorizer sklearn class.
-        For further information check the documentation at: https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html.
+    def preprocess_df(self, df: pd.DataFrame, column_name: str, lowercase: bool = True, remove_numerics: bool = True,
+                      remove_stopwords: bool = True,
+                      remove_punctuation: bool = True, stemming: bool = False, stringifized=False,
+                      stopwords=english_stopwords) -> List[Union[list, str]]:
+        """Preprocess a DataFrame column of texts.
 
         :param df: the input pandas DataFrame
         :param column_name: the name of the column
-        :param stop_words: the stopwords list, e.g. 'english'
-        :param max_df: max document frequency
-        :param min_df: min document frequency
-        :param ngram: the considered n-grams
-        :param binary: if true it creates binary bag-of-words vectors, i.e. it simply describes whether a word exists (one) or not (zero)
-        :return: an already fitted bag of words vectorizer
+        :param lowercase: if true it converts all the uppercase letter to lowercase ones
+        :param remove_numerics: if true it removes of all the numbers
+        :param remove_stopwords: if true it removes all the stopwords contained in stopwords variable
+        :param remove_punctuation: if true it removes all the punctuation marks
+        :param stemming: if true it stems the text
+        :param stringifized: if true it converts the list of tokens of each row to a text again
+        :param stopwords: the list of the stopwords
+        :return: a list of lists of word tokens
         """
-        cv = CountVectorizer(stop_words=stop_words, max_df=max_df, min_df=min_df, ngram_range=ngram, binary=binary)
-        cv.fit(df[column_name])
-        return cv
+        texts = df[column_name]
+        return [self.preprocess(text, lowercase=lowercase, remove_numerics=remove_numerics,
+                                remove_stopwords=remove_stopwords, remove_punctuation=remove_punctuation,
+                                stemming=stemming, stringifized=stringifized, stopwords=stopwords) for text in texts]
+
+    def preprocess(self, text: str, lowercase: bool = True, remove_numerics: bool = True, remove_stopwords: bool = True,
+                   remove_punctuation: bool = True, stemming: bool = False, stringifized=False,
+                   stopwords=english_stopwords) -> Union[list, str]:
+        """Preprocess a given text.
+
+        It removes (i) unnecessary whitespace and punctuation characters, (ii) stopwords, (iii) numbers, and
+        performs stemming.
+
+        :param text: the input text
+        :param lowercase: if true it converts all the uppercase letter to lowercase ones
+        :param remove_numerics: if true it removes of all the numbers
+        :param remove_stopwords: if true it removes all the stopwords contained in stopwords variable
+        :param remove_punctuation: if true it removes all the punctuation marks
+        :param stemming: if true it stems the text
+        :param stringifized: if true it converts the list of tokens to a text again
+        :param stopwords: the list of the stopwords
+        :return: a list of word tokens or a preprocessed str
+        """
+        if lowercase:
+            text = self.lowercase(text)
+        word_tokens = self.tokenize(text)
+        if remove_numerics:
+            word_tokens = [word for word in word_tokens if not word.isnumeric()]
+        if remove_stopwords:
+            word_tokens = [word for word in word_tokens if not word in stopwords]
+        if remove_punctuation:
+            word_tokens = [word.translate(str.maketrans('', '', string.punctuation)) for word in word_tokens]
+            word_tokens = [word for word in word_tokens if word != '']
+        if remove_numerics:
+            word_tokens = [re.sub('\d', '', word) for word in word_tokens]
+        if stemming:
+            word_tokens = self.stem(word_tokens)
+
+        if stringifized:
+            return ' '.join(word_tokens)
+        return word_tokens
+
+    def tokenize_df(self, df: pd.DataFrame, column_name: str) -> List[list]:
+        return [self.tokenize(text) for text in df[column_name]]
+
+    def tokenize(self, text: str) -> list:
+        """Return the given text as word tokens.
+
+        The nltk.word_tokenize is used to tokenize the text.
+
+        :param text: the input text
+        :return: a list of word tokens
+        """
+        return nltk.word_tokenize(text)
+
+    def clean_text(self, text: str) -> str:
+        return text
+
+    def lowercase(self, text: str) -> str:
+        """Convert all the letters of a text to lowercase.
+
+        :param text: the input text
+        :return: a text with all the letters in lowercase
+        """
+        return text.lower()
+
+    def stem(self, words: list) -> list:
+        """Stem word tokens.
+
+        nltk.stem.PorterStemmer is used as a stemmer.
+
+        :param words: the given word tokens
+        :return: the given words stemmed
+        """
+        stemmer = PorterStemmer()
+        words = [stemmer.stem(word) for word in words]
+        return words
