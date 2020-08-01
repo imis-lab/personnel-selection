@@ -1,3 +1,5 @@
+from typing import List
+
 import gensim
 import pandas as pd
 from gensim.models import Word2Vec
@@ -28,8 +30,8 @@ class RepresentationLearner:
         cv.fit(df[column_name])
         return cv
 
-    def word2vec(self, tokenized_texts, size=100, window=5, min_count=1, skipgram=1,
-                 workers=4) -> gensim.models.word2vec.Word2Vec:
+    def word2vec(self, tokenized_texts: List[list], size: int = 100, window: int = 5, min_count: int = 1,
+                 skipgram: int = 1, workers: int = 4) -> gensim.models.word2vec.Word2Vec:
         """Build and train a word2vec model.
 
         This method wraps the Word2Vec gensim class.
