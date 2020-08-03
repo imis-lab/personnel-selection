@@ -3,6 +3,7 @@ from typing import List
 import gensim
 import pandas as pd
 from gensim.models import Word2Vec
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from sklearn.feature_extraction.text import CountVectorizer
 
 
@@ -38,7 +39,7 @@ class RepresentationLearner:
         For further information check the documentation at: https://radimrehurek.com/gensim/models/word2vec.html.
 
         :param tokenized_texts: the input texts as lists of word tokens
-        :param size: dimensionality of the word vectores
+        :param size: dimensionality of the word vectors
         :param window: the neighbors windows of each word
         :param min_count:  it ignores all words with total frequency lower than min_count
         :param skipgram: if 1 it runs by following the skip-gram architecture, if 0 it runs by following the CBOW architecture
@@ -48,11 +49,29 @@ class RepresentationLearner:
         model = Word2Vec(tokenized_texts, size=size, window=window, min_count=min_count, workers=workers, sg=skipgram)
         return model
 
-    def doc2vec(self):
-        pass
+    def doc2vec(self, tokenized_texts: List[list], size: int = 100, window: int = 5, min_count: int = 1,
+                workers: int = 4) -> gensim.models.doc2vec.Doc2Vec:
+        """Build and train a doc2vec model.
+
+        This method wraps the Doc2Vec gensim class.
+        For further information check the documentation at: https://radimrehurek.com/gensim/models/doc2vec.html.
+
+        :param tokenized_texts: the input texts as lists of word tokens
+        :param size: dimensionality of the word vectors
+        :param window: the neighbors windows of each word
+        :param min_count:  it ignores all words with total frequency lower than min_count
+        :param workers: the number of parallel workers
+        :return: the trained doc2vec model
+        """
+        documents = [TaggedDocument(doc, [i]) for i, doc in enumerate(tokenized_texts)]
+        model = Doc2Vec(documents, vector_size=size, window=window, min_count=min_count, workers=workers)
+        return model
 
     def glove(self):
         pass
 
     def fast_text(self):
+        pass
+
+    def node2vec(self):
         pass
