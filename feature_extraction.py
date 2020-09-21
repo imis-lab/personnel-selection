@@ -5,7 +5,7 @@ import pandas as pd
 from gensim.models import Word2Vec
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from sklearn.feature_extraction.text import CountVectorizer
-
+from gensim.models.keyedvectors import KeyedVectors
 
 class RepresentationLearner:
     """Feature extraction and representation learning methods.
@@ -81,3 +81,20 @@ class RepresentationLearner:
 
     def graph_sage(self):
         pass
+
+class Embedding:
+    """Methods for retrieving or storing embeddings from/to files and other related functionality.
+    """
+
+    def load_word2vec_vector_from_file(self, path: str, binary : bool = True) -> gensim.models.keyedvectors.Word2VecKeyedVectors:
+        """Load a word2vec vector.
+
+        This method wraps the KeyedVectors.load_word2vec_format gensim method.
+        For further information check the documentation at: https://radimrehurek.com/gensim/models/keyedvectors.html#gensim.models.keyedvectors.Word2VecKeyedVectors.load_word2vec_format.
+
+        :param path: The file path to the saved word2vec-format file
+        :param binary: If true, indicates whether the data is in binary word2vec format
+        :return: the word2vec vector
+        """
+        vector = KeyedVectors.load_word2vec_format(path, binary=binary)
+        return vector
