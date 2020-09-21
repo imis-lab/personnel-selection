@@ -7,6 +7,7 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from sklearn.feature_extraction.text import CountVectorizer
 from gensim.models.keyedvectors import KeyedVectors
 
+
 class RepresentationLearner:
     """Feature extraction and representation learning methods.
     """
@@ -82,11 +83,13 @@ class RepresentationLearner:
     def graph_sage(self):
         pass
 
+
 class Embedding:
     """Methods for retrieving or storing embeddings from/to files and other related functionality.
     """
 
-    def load_word2vec_vector_from_file(self, path: str, binary : bool = True) -> gensim.models.keyedvectors.Word2VecKeyedVectors:
+    def load_word2vec_vector_from_file(self, path: str,
+                                       binary: bool = True) -> gensim.models.keyedvectors.Word2VecKeyedVectors:
         """Load a word2vec vector.
 
         This method wraps the KeyedVectors.load_word2vec_format gensim method.
