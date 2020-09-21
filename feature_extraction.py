@@ -75,3 +75,9 @@ class RepresentationLearner:
 
     def node2vec(self):
         pass
+
+    def random_projection(self):
+        pass
+
+    def graph_sage(self):
+        pass
