@@ -11,7 +11,8 @@ def convert_json_dataset_to_csv(input_filename: str, output_filename: str, unass
     """
     with open(input_filename) as f:
         issues = json.load(f)['issues']
-    with open(output_filename, 'w') as f:
+    with open(output_filename, 'w',
+        encoding = 'utf-8-sig', errors = 'ignore') as f:
         fieldnames = ['label', 'text']
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
