@@ -2,7 +2,7 @@ from neo4j import GraphDatabase, CypherError, ServiceUnavailable
 
 class Neo4jDatabase(object): 
     """
-    Wrapper class to handle the database 
+    Wrapper class which handles the database 
     more efficiently, by abstracting repeating code.
     """
     def __init__(self, uri, user, password): # Create the database connection.
@@ -26,4 +26,4 @@ class Neo4jDatabase(object):
         result = tx.run(query)
         try:
             return result.values() # Return node, relationship values in a list of tuples.
-        except CypherError as err: pass #print(err) # Handle the erroneous query instead of breaking the execution.
+        except CypherError as err: print(err) #pass # Handle the erroneous query instead of breaking the execution.

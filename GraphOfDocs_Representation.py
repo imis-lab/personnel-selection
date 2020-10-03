@@ -2,6 +2,7 @@ import sys
 import time
 from neo4j import ServiceUnavailable
 from GraphOfDocs_Representation.neo4j_wrapper import Neo4jDatabase
+from GraphOfDocs_Representation.graph_algos import GraphAlgos
 from GraphOfDocs_Representation.create import *
 
 def graphofdocs(create, initialize, dirpath):
@@ -33,9 +34,14 @@ def graphofdocs(create, initialize, dirpath):
         
     if initialize:
         # Run initialization functions.
-        pass
+        with GraphAlgos(database, 'GraphOfDocs', 'Issue', 'includes', 'Word') as graph:
+            graph.pagerank('pagerank')
+            graph.node2vec('n2v_embedding')
+            graph.graphSage('gs_embedding', 10)
+            graph.randomProjection('rp_embedding', 10, 10)
+            graph.get_embeddings('n2v_embedding')
 
     database.close()
     return
 
-if __name__ == '__main__': graphofdocs(True, False, r'C:\Users\USER\Desktop\issues.json')
+if __name__ == '__main__': graphofdocs(False, True, r'C:\Users\USER\Desktop\issues.json')
