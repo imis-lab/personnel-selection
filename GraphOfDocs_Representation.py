@@ -34,12 +34,8 @@ def graphofdocs(create, initialize, dirpath):
         
     if initialize:
         # Run initialization functions.
-        with GraphAlgos(database, 'GraphOfDocs', 'Issue', 'includes', 'Word') as graph:
-            graph.pagerank('pagerank')
-            graph.node2vec('n2v_embedding')
-            graph.graphSage('gs_embedding', 10)
-            graph.randomProjection('rp_embedding', 10, 10)
-            graph.get_embeddings('n2v_embedding')
+        with GraphAlgos(database, 'GraphOfDocs', 'Word', 'connects') as graph:
+            graph.write_embeddings_to_csv('n2v_embedding', r'C:\Users\USER\Desktop\embs.csv')
 
     database.close()
     return
