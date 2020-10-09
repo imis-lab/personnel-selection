@@ -3,6 +3,7 @@ import time
 from neo4j import ServiceUnavailable
 from GraphOfDocs_Representation.neo4j_wrapper import Neo4jDatabase
 from GraphOfDocs_Representation.graph_algos import GraphAlgos
+from GraphOfDocs_Representation.in_memory_graph import inMemoryGraph
 from GraphOfDocs_Representation.create import *
 
 def graphofdocs(create, initialize, dirpath):
@@ -34,8 +35,8 @@ def graphofdocs(create, initialize, dirpath):
         
     if initialize:
         # Run initialization functions.
-        with GraphAlgos(database, 'GraphOfDocs', 'Word', 'connects') as graph:
-            graph.write_embeddings_to_csv('n2v_embedding', r'C:\Users\USER\Desktop\embs.csv')
+        with inMemoryGraph(database) as graph:
+            print('Here')
 
     database.close()
     return
