@@ -15,29 +15,25 @@ class GraphAlgos:
     """
     database = None # Static variable shared across objects.
 
-    def __init__(self, database, graph, start, relationship, end = None, property = None):
+    def __init__(self, database, start, relationship, orientation = 'NATURAL', end = None):
         # Initialize the static variable and class member.
         if GraphAlgos.database is None:
             GraphAlgos.database = database
-        self.graph = graph
+        
+        # Initialize the optional parameter.
+        end = end if end is not None else start
 
-        # Initialize the optional arguments.
-        rel_properties = (None if property is None
-                          else f'{{relationshipProperties: "{property}"}}')
-        end = start if end is None else end
-
-        # Setup the graph parameters.
-        graph_setup = (
-            f'"{self.graph}", ["{start}", "{end}"], "{relationship}"'
+        # Construct the projection of the anonymous graph.
+        self.graph_projection = (
+            f'{{nodeProjection: ["{start}", "{end}"], '
+            'relationshipProjection: {'
+            f'{relationship}: {{'
+            f'type: "{relationship}", '
+            f'orientation: "{orientation}"}}}}'
         )
-        if rel_properties is not None:
-            graph_setup = ', '.join((graph_setup, rel_properties))
-
-        # Create the graph.
-        GraphAlgos.database.execute(f'CALL gds.graph.create({graph_setup})', 'w')
 
     def pagerank(self, write_property, max_iterations = 20, damping_factor = 0.85):
-        setup = (f'"{self.graph}", {{ '
+        setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
             f'maxIterations: {max_iterations}, '
             f'dampingFactor: {damping_factor}}}'
@@ -46,7 +42,7 @@ class GraphAlgos:
 
     def node2vec(self, write_property, embedding_size = 128, iterations = 1, walk_length = 80,
                  walks_per_node = 10, window_size = 10, walk_buffer_size = 1000):
-        setup = (f'"{self.graph}", {{ '
+        setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
             f'embeddingSize: {embedding_size}, '
             f'iterations: {iterations}, '
@@ -59,7 +55,7 @@ class GraphAlgos:
 
     def graphSage(self, write_property, embedding_size = 64, epochs = 1, max_iterations = 10,
                   aggregator = 'mean', activation_function = 'sigmoid', degree_as_property = True):
-        setup = (f'"{self.graph}", {{ '
+        setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
             f'embeddingSize: {embedding_size}, '
             f'epochs: {epochs}, '
@@ -72,7 +68,7 @@ class GraphAlgos:
 
     def randomProjection(self, write_property, embedding_size = 10, max_iterations = 10,
                          sparsity = 3, normalize_l2 = False):
-        setup = (f'"{self.graph}", {{ '
+        setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
             f'embeddingSize: {embedding_size}, '
             f'maxIterations: {max_iterations}, '
@@ -153,4 +149,3 @@ class GraphAlgos:
     def __exit__(self, exc_type, exc_value, tb):
         if exc_type is not None:
             traceback.print_exception(exc_type, exc_value, tb)
-        GraphAlgos.database.execute(f'CALL gds.graph.drop("{self.graph}")', 'w')

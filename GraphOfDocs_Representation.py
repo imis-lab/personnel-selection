@@ -35,8 +35,8 @@ def graphofdocs(create, initialize, dirpath):
         
     if initialize:
         # Run initialization functions.
-        with inMemoryGraph(database) as graph:
-            print('Here')
+        with GraphAlgos(database, 'Word', 'connects') as graph:
+            graph.node2vec('test123', 10, 1, 10, 10, 4, 100)
 
     database.close()
     return
