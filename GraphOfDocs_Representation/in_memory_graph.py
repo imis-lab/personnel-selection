@@ -97,7 +97,7 @@ class inMemoryGraph:
         print(model.wv.most_similar('python'))
         model.wv.save_word2vec_format(filepath)
 
-    def graphsage(self, walk_length = 4, number_of_walks = 1, epochs = 1):
+    def graphsage(self, walk_length = 4, number_of_walks = 1, epochs = 1, workers = 4):
         # Construct the node features based on the node id.
         for node_id, node_data in self.G.nodes(data = True):
             node_data["feature"] = [node_id, len(str(node_id))]
@@ -141,7 +141,7 @@ class inMemoryGraph:
             epochs = epochs,
             verbose = 1,
             use_multiprocessing = False,
-            workers = 4,
+            workers = workers,
             shuffle = True,
         )
 
@@ -151,8 +151,7 @@ class inMemoryGraph:
 
         node_ids = node_subjects.index
         node_gen = GraphSAGENodeGenerator(G, batch_size, num_samples).flow(node_ids)
-        node_embeddings = embedding_model.predict(node_gen, workers = 4, verbose = 1)
-
+        node_embeddings = embedding_model.predict(node_gen, workers = workers, verbose = 1)
 
     # These methods enable the use of this class in a with statement.
     def __enter__(self):

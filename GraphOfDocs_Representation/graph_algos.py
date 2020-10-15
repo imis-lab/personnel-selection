@@ -77,6 +77,15 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.alpha.randomProjection.write({setup})', 'w')
 
+    def nodeSimilarity(self, write_property, write_relationship, cutoff = 0.5, top_k = 10):
+        setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'writeRelationshipType: "{write_relationship}", '
+            f'similarityCutoff: {cutoff}, '
+            f'topK: {top_k}}}'
+        )
+        GraphAlgos.database.execute(f'CALL gds.nodeSimilarity.write({setup})', 'w')
+
     @staticmethod
     def get_embeddings(write_property):
         query = (
