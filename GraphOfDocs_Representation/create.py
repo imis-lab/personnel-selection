@@ -4,6 +4,8 @@ create data in the Neo4j database.
 """
 import json
 import platform
+from pathlib import Path
+from gensim.models import Word2Vec
 from GraphOfDocs_Representation.utils import (
     clear_screen, generate_words
 )
@@ -183,41 +185,52 @@ def create_issues_from_json(database, dirpath):
     print(f'Created {total_count - skip_count}, skipped {skip_count} issues.')
     return
 
-def run_initial_algorithms(database):
-    """
-    Function that runs centrality & community detection algorithms,
-    in order to prepare the data for analysis and visualization.
-    Pagerank & Louvain are used, respectively.
-    The calculated score for each node of the algorithms is being stored
-    on the nodes themselves.
-    """
-    # Append the parameter 'weight' for the weighted version of the algorithm.
-    pagerank(database, 'Word', 'connects', 20, 'pagerank')
-    pagerank(database, 'Paper', 'cites', 20, 'pagerank')
-    louvain(database, 'Word', 'connects', 'community')
-    louvain(database, 'Paper', 'cites', 'community')
-    return
+def train_word2vec(dirpath, model_name, size):
+    # Read json in memory.
+    with open(dirpath, encoding = 'utf-8-sig', errors = 'ignore') as f:
+        issues = json.load(f)['issues']
 
-def create_similarity_graph(database):
-    """
-    Function that creates a similarity graph
-    based on Jaccard similarity measure.
-    This measure connects the paper nodes with each other
-    using the relationship 'is_similar', 
-    which has the similarity score as a property.
-    In order to prepare the data for analysis and visualization,
-    we use Louvain Community detection algorithm.
-    The calculated community id for each node is being stored
-    on the nodes themselves.
-    """
-    # Remove similarity edges from previous iterations.
-    database.execute('MATCH ()-[r:is_similar]->() DELETE r', 'w')
+    # Generate a list of lists, where each inner list 
+    # contains the tokens of each text.
+    texts = [
+        generate_words(' '.join((
+            str(issue.get('title', '')),
+            str(issue.get('description', ''))
+        ))) for issue in issues
+    ]
 
-    # Create the similarity graph using Jaccard similarity measure.
-    jaccard(database, 'Paper', 'includes', 'Word', 0.23, 'is_similar', 'score')
+    # Train the Word2Vec model on the texts of jira issues.
+    model = Word2Vec(texts, size = size, window = 5, min_count = 1, workers = 4)
+    model.save(f'{model_name}_{size}.model')
 
-    # Find all similar document communities.
-    # Append the parameter 'score' for the weighted version of the algorithm.
-    louvain(database, 'Paper', 'is_similar', 'community')
-    print('Similarity graph created.')
-    return
+def create_word2vec_similarity_graph(database, dirpath, model_name, size = 100):
+    # If the file doesn't exist, train the word2vec model.
+    if not Path(model_name).is_file():
+        train_word2vec(dirpath, model_name, size)
+
+    current_system = platform.system()
+
+    # Load the word2vec model
+    model = Word2Vec.load(model_name)
+    
+    # Initialize variables.
+    count = 0
+    total_count = len(model.wv.vocab)
+
+    # Find all tokens in the vocabulary and their most similar terms.
+    for token in model.wv.vocab:
+        print(f'Processing {count} out of {total_count} tokens...' )
+        for term, score in model.wv.most_similar(token, topn = 10):
+            # Create the similarity relationship between 
+            # the token and each of its terms, 
+            # while setting the score property.
+            query = (
+                f'MATCH (token:Word {{key: "{token}"}}) '
+                f'MATCH (term:Word {{key: "{term}"}}) '
+                f'CREATE (token)-[r:similar_w2v{{score: {score}}}]->(term)'
+            )
+            database.execute(query, 'w')
+
+        # Clear the screen to output the update the progress counter.
+        clear_screen(current_system)
+        count += 1
