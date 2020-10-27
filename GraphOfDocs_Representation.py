@@ -3,7 +3,6 @@ import time
 from neo4j import ServiceUnavailable
 from GraphOfDocs_Representation.neo4j_wrapper import Neo4jDatabase
 from GraphOfDocs_Representation.graph_algos import GraphAlgos
-from GraphOfDocs_Representation.in_memory_graph import inMemoryGraph
 from GraphOfDocs_Representation.create import *
 
 def graphofdocs(create, initialize, dirpath):
@@ -32,13 +31,28 @@ def graphofdocs(create, initialize, dirpath):
         create_issues_from_json(database, dirpath)
         end = time.perf_counter()
         print(f'Create papers {end-start} sec')
-        
-    if initialize:
-        # Run initialization functions.
-        with GraphAlgos(database, 'Word', 'connects') as graph:
-            graph.node2vec('test123', 10, 1, 10, 10, 4, 100)
+
+    if initialize: # Run initialization functions.
+
+        # Create the similarity graph of topN = 10 similar words using emb. dim. = 300
+        start = time.perf_counter()
+        create_word2vec_similarity_graph(database, dirpath, 'jira_issues_300.model', 300)
+        end = time.perf_counter()
+        print(f'Created similarity graph in {end-start} sec')
+
+        with GraphAlgos(database, 'Word', 'similar_w2v', 'Word') as graph:
+            for dim in [100, 200, 300]:
+                # Generate the embeddings in the database.
+                graph.graphSage(f'gs_{dim}', dim)
+                graph.node2vec(f'n2v_{dim}', dim)
+                graph.randomProjection(f'rp_{dim}', dim / 10)
+
+                # Export the embeddings in csv.
+                graph.write_word_embeddings_to_csv(f'gs_{dim}', rf'C:\Users\USER\Desktop\gs_{dim}.csv')
+                graph.write_word_embeddings_to_csv(f'n2v_{dim}', rf'C:\Users\USER\Desktop\n2v_{dim}.csv')
+                graph.write_word_embeddings_to_csv(f'rp_{dim}', rf'C:\Users\USER\Desktop\rp_{dim}.csv')
 
     database.close()
     return
 
-if __name__ == '__main__': graphofdocs(False, True, r'C:\Users\USER\Desktop\issues.json')
+if __name__ == '__main__': graphofdocs(False, False, r'C:\Users\USER\Desktop\issues.json')
