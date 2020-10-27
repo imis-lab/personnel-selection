@@ -1,6 +1,7 @@
+import time
+import json
 import traceback
 import numpy as np
-import time
 
 from statistics import mean
 from sklearn import preprocessing
@@ -15,7 +16,7 @@ class GraphAlgos:
     """
     database = None # Static variable shared across objects.
 
-    def __init__(self, database, start, relationship, orientation = 'NATURAL', end = None):
+    def __init__(self, database, start, relationship, end = None, orientation = 'NATURAL'):
         # Initialize the static variable and class member.
         if GraphAlgos.database is None:
             GraphAlgos.database = database
@@ -40,7 +41,7 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.pageRank.write({setup})', 'w')
 
-    def node2vec(self, write_property, embedding_size = 128, iterations = 1, walk_length = 80,
+    def node2vec(self, write_property, embedding_size = 100, iterations = 1, walk_length = 80,
                  walks_per_node = 10, window_size = 10, walk_buffer_size = 1000):
         setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
@@ -66,7 +67,7 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.alpha.graphSage.write({setup})', 'w')
 
-    def randomProjection(self, write_property, embedding_size = 10, max_iterations = 10,
+    def randomProjection(self, write_property, embedding_size = 100, max_iterations = 10,
                          sparsity = 3, normalize_l2 = False):
         setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
@@ -96,35 +97,15 @@ class GraphAlgos:
         return GraphAlgos.database.execute(query, 'r')
 
     @staticmethod
-    def calc_avg_embedding(write_property):
+    def write_word_embeddings_to_csv(write_property, filepath):
         query = (
-            'MATCH (i:Issue)-[:includes]->(w:Word) '
-            f'RETURN i.key, COLLECT(w.{write_property})'
-            )
-        issues_avg_embeddings = [
-            [row[0], list(map(mean, zip(*row[1])))]
-            for row in GraphAlgos.database.execute(query, 'r')
-        ]
-        start = time.perf_counter()
-        for [issue, avg_embedding] in issues_avg_embeddings:
-            query = (
-                f'MATCH (i:Issue {{key: "{issue}"}}) '
-                f'SET i.{write_property} = {avg_embedding}'
-            )
-            GraphAlgos.database.execute(query, 'w')
-        end = time.perf_counter()
-        print(f'For loop {end-start} sec')
-
-    @staticmethod
-    def write_embeddings_to_csv(write_property, filepath):
-        query = (
-            f'MATCH (w:Word) WHERE EXISTS(w.{write_property}) RETURN w.key, w.{write_property}'
+            f'MATCH (w:Word) WHERE EXISTS(w.{write_property}) '
+            f'RETURN w.key, w.{write_property}'
         )
-        labels, embeddings = map(list, zip(*GraphAlgos.database.execute(query, 'r')))
-       
         with open(filepath, 'w', encoding = 'utf-8-sig', errors = 'ignore') as file:
-            for label, embedding in zip(labels, embeddings):
-                file.write(f'{label}, {embedding}\n')
+            file.write('idx,word,embedding\n')
+            for i, (word, embedding) in enumerate(GraphAlgos.database.execute(query, 'r')):
+                file.write(f'{i},{word},"{embedding}"\n')
 
     @staticmethod
     def train_classifier(embeddings):
