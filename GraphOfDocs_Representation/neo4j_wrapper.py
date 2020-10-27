@@ -14,16 +14,18 @@ class Neo4jDatabase(object):
     def execute(self, query, mode): # Execute queries in the database.
         with self._driver.session() as session:
             if (mode == 'r'): # Reading query.
-                result = session.read_transaction(self.__execute, query)
+                result = session.read_transaction(self.__execute, query).values()
             elif(mode == 'w'): # Writing query.
-                result = session.write_transaction(self.__execute, query)
+                result = session.write_transaction(self.__execute, query).values()
+            elif(mode == 'g'): # Returning graph data query.
+                result = session.read_transaction(self.__execute, query).data()
             else:
-                raise TypeError('Execution mode can either be (r)ead or (w)rite!')
+                raise TypeError('Execution mode can either be (r)ead, (w)rite or (g)raph data!')
             return result
 
-    @staticmethod # private method.
+    @staticmethod # static private method.
     def __execute(tx, query):
         result = tx.run(query)
         try:
-            return result.values() # Return node, relationship values in a list of tuples.
-        except CypherError as err: print(err) #pass # Handle the erroneous query instead of breaking the execution.
+            return result
+        except CypherError as err: print(err) # Handle the erroneous query instead of breaking the execution.
