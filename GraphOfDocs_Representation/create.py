@@ -200,8 +200,8 @@ def train_word2vec(dirpath, model_name, size):
     ]
 
     # Train the Word2Vec model on the texts of jira issues.
-    model = Word2Vec(texts, size = size, window = 5, min_count = 1, workers = 4)
-    model.save(f'{model_name}_{size}.model')
+    model = Word2Vec(texts, size = size, window = 5, min_count = 1, workers = 8)
+    model.save(f'{model_name}')
 
 def create_word2vec_similarity_graph(database, dirpath, model_name, size = 100):
     # If the file doesn't exist, train the word2vec model.

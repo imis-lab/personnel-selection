@@ -24,15 +24,11 @@ def graphofdocs(create, initialize, dirpath):
         # Create uniqueness constraint on key to avoid duplicate word nodes.
         create_unique_constraints(database)
 
-        # Create papers and their citations, authors and their affiliations,
-        # and the graph of words for each abstract, 
-        # which is a subgraph of the total graph of docs.
+        # Create issues from json using the GraphOfDocs model.
         start = time.perf_counter()
         create_issues_from_json(database, dirpath)
         end = time.perf_counter()
         print(f'Create papers {end-start} sec')
-
-    if initialize: # Run initialization functions.
 
         # Create the similarity graph of topN = 10 similar words using emb. dim. = 300
         start = time.perf_counter()
@@ -40,12 +36,13 @@ def graphofdocs(create, initialize, dirpath):
         end = time.perf_counter()
         print(f'Created similarity graph in {end-start} sec')
 
+    if initialize: # Run initialization functions.
         with GraphAlgos(database, 'Word', 'similar_w2v', 'Word') as graph:
             for dim in [100, 200, 300]:
                 # Generate the embeddings in the database.
                 graph.graphSage(f'gs_{dim}', dim)
                 graph.node2vec(f'n2v_{dim}', dim)
-                graph.randomProjection(f'rp_{dim}', dim / 10)
+                graph.randomProjection(f'rp_{dim}', dim // 10)
 
                 # Export the embeddings in csv.
                 graph.write_word_embeddings_to_csv(f'gs_{dim}', rf'C:\Users\USER\Desktop\gs_{dim}.csv')
