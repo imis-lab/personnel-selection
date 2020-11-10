@@ -37,19 +37,25 @@ def graphofdocs(create, initialize, dirpath):
         print(f'Created similarity graph in {end-start} sec')
 
     if initialize: # Run initialization functions.
-        with GraphAlgos(database, 'Word', 'similar_w2v', 'Word') as graph:
+        with GraphAlgos(database, 'Word', 'similar_w2v', 'Word', rel_weight = 'score') as graph:
             for dim in [100, 200, 300]:
                 # Generate the embeddings in the database.
-                graph.graphSage(f'gs_{dim}', dim)
-                graph.node2vec(f'n2v_{dim}', dim)
-                graph.randomProjection(f'rp_{dim}', dim // 10)
+                graph.graphSage(f'gs_{dim}', embedding_dim = dim)
+                graph.node2vec(f'n2v_{dim}', embedding_dim = dim)
+                graph.fastRP(f'fastrp_{dim}', embedding_dim = dim)
+
+                graph.graphSage(f'gs_weighted_{dim}', embedding_dim = dim, rel_weight = 'score')
+                graph.fastRP(f'fastrp_weighted_{dim}', embedding_dim = dim, rel_weight = 'score')
 
                 # Export the embeddings in csv.
-                graph.write_word_embeddings_to_csv(f'gs_{dim}', rf'C:\Users\USER\Desktop\gs_{dim}.csv')
-                graph.write_word_embeddings_to_csv(f'n2v_{dim}', rf'C:\Users\USER\Desktop\n2v_{dim}.csv')
-                graph.write_word_embeddings_to_csv(f'rp_{dim}', rf'C:\Users\USER\Desktop\rp_{dim}.csv')
+                graph.write_word_embeddings_to_csv(f'gs_{dim}', f'gs_{dim}.csv')
+                graph.write_word_embeddings_to_csv(f'n2v_{dim}', f'n2v_{dim}.csv')
+                graph.write_word_embeddings_to_csv(f'fastrp_{dim}', f'fastrp_{dim}.csv')
+
+                graph.write_word_embeddings_to_csv(f'gs_weighted_{dim}', f'gs_weighted_{dim}.csv')
+                graph.write_word_embeddings_to_csv(f'fastrp_weighted_{dim}', f'fastrp_weighted_{dim}.csv')
 
     database.close()
     return
 
-if __name__ == '__main__': graphofdocs(False, False, r'C:\Users\USER\Desktop\issues.json')
+if __name__ == '__main__': graphofdocs(False, True, 'issues_55k.json')

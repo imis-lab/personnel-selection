@@ -16,7 +16,7 @@ class GraphAlgos:
     """
     database = None # Static variable shared across objects.
 
-    def __init__(self, database, start, relationship, end = None, orientation = 'NATURAL'):
+    def __init__(self, database, start, relationship, end = None, orientation = 'NATURAL', rel_weight = None):
         # Initialize the static variable and class member.
         if GraphAlgos.database is None:
             GraphAlgos.database = database
@@ -30,8 +30,15 @@ class GraphAlgos:
             'relationshipProjection: {'
             f'{relationship}: {{'
             f'type: "{relationship}", '
-            f'orientation: "{orientation}"}}}}'
+            f'orientation: "{orientation}"'
         )
+        
+        # If the relationship weight property exists, then set it. 
+        if rel_weight is not None:
+            self.graph_projection += f', properties: "{rel_weight}"'
+
+        # Add two right brackets to complete the query.
+        self.graph_projection += '}}'
 
     def pagerank(self, write_property, max_iterations = 20, damping_factor = 0.85):
         setup = (f'{self.graph_projection}, '
@@ -41,11 +48,11 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.pageRank.write({setup})', 'w')
 
-    def node2vec(self, write_property, embedding_size = 100, iterations = 1, walk_length = 80,
+    def node2vec(self, write_property, embedding_dim = 100, iterations = 1, walk_length = 80,
                  walks_per_node = 10, window_size = 10, walk_buffer_size = 1000):
         setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
-            f'embeddingSize: {embedding_size}, '
+            f'embeddingDimension: {embedding_dim}, '
             f'iterations: {iterations}, '
             f'walkLength: {walk_length}, '
             f'walksPerNode: {walks_per_node}, '
@@ -54,29 +61,58 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.alpha.node2vec.write({setup})', 'w')
 
-    def graphSage(self, write_property, embedding_size = 64, epochs = 1, max_iterations = 10,
-                  aggregator = 'mean', activation_function = 'sigmoid', degree_as_property = True):
-        setup = (f'{self.graph_projection}, '
-            f'writeProperty: "{write_property}", '
-            f'embeddingSize: {embedding_size}, '
+    def graphSage(self, write_property, rel_weight = None, embedding_dim = 64, epochs = 1,
+                  max_iterations = 10, aggregator = 'mean', activation_function = 'sigmoid'):
+
+        # The community edition of the Neo4j Graph Data Science Library allows only one model to be stored in the database.
+        model_exists = GraphAlgos.database.execute('CALL gds.beta.model.exists("graphSage") YIELD exists', 'r')[0][0]
+        if model_exists: # then drop the model from the database.
+            GraphAlgos.database.execute('CALL gds.beta.model.drop("graphSage")', 'r')
+
+        train_setup = (f'{self.graph_projection}, '
+            f'embeddingDimension: {embedding_dim}, '
             f'epochs: {epochs}, '
+            f'modelName: "graphSage", '
             f'maxIterations: {max_iterations}, '
             f'aggregator: "{aggregator}", '
             f'activationFunction: "{activation_function}", '
-            f'degreeAsProperty: {degree_as_property}}}'
+            f'degreeAsProperty: True'
         )
-        GraphAlgos.database.execute(f'CALL gds.alpha.graphSage.write({setup})', 'w')
 
-    def randomProjection(self, write_property, embedding_size = 100, max_iterations = 10,
-                         sparsity = 3, normalize_l2 = False):
+        # If the relationship weight property exists, then set it.
+        if rel_weight is not None:
+            train_setup += f', relationshipWeightProperty: "{rel_weight}"'
+
+        # Add a right bracket to complete the query.
+        train_setup += '}' 
+
+        write_setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'modelName: "graphSage"}}'
+        )
+
+        GraphAlgos.database.execute(f'CALL gds.beta.graphSage.train({train_setup})', 'w')
+        GraphAlgos.database.execute(f'CALL gds.beta.graphSage.write({write_setup})', 'w')
+
+    def fastRP(self, write_property, rel_weight = None, embedding_dim = 100, iterations = 10):
+        # Construct the iteration weights vector,  its first element is 0.0 and the rest are 1.0.
+        # The length of the vector determines the amount of iterations by the algorithm.
+        iteration_weights = [0.0] + [1.0] * (iterations - 1)
+
         setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
-            f'embeddingSize: {embedding_size}, '
-            f'maxIterations: {max_iterations}, '
-            f'sparsity: {sparsity}, '
-            f'normalizeL2: {normalize_l2}}}'
+            f'embeddingDimension: {embedding_dim}, '
+            f'iterationWeights: {iteration_weights}'
         )
-        GraphAlgos.database.execute(f'CALL gds.alpha.randomProjection.write({setup})', 'w')
+
+        # If the relationship weight property exists, then set it.
+        if rel_weight is not None:
+            setup += f', relationshipWeightProperty: "{rel_weight}"'
+
+        # Add a right bracket to complete the query.
+        setup += '}'
+
+        GraphAlgos.database.execute(f'CALL gds.fastRP.write({setup})', 'w')
 
     def nodeSimilarity(self, write_property, write_relationship, cutoff = 0.5, top_k = 10):
         setup = (f'{self.graph_projection}, '
