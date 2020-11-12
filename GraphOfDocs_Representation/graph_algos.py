@@ -27,7 +27,7 @@ class GraphAlgos:
         # Construct the projection of the anonymous graph.
         self.graph_projection = (
             f'{{nodeProjection: ["{start}", "{end}"], '
-            'relationshipProjection: {'
+             'relationshipProjection: {'
             f'{relationship}: {{'
             f'type: "{relationship}", '
             f'orientation: "{orientation}"'
@@ -47,6 +47,23 @@ class GraphAlgos:
             f'dampingFactor: {damping_factor}}}'
         )
         GraphAlgos.database.execute(f'CALL gds.pageRank.write({setup})', 'w')
+
+    def nodeSimilarity(self, write_property, write_relationship, cutoff = 0.5, top_k = 10):
+        setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'writeRelationshipType: "{write_relationship}", '
+            f'similarityCutoff: {cutoff}, '
+            f'topK: {top_k}}}'
+        )
+        GraphAlgos.database.execute(f'CALL gds.nodeSimilarity.write({setup})', 'w')
+
+    def louvain(self, write_property, write_relationship, max_levels = 10, max_iterations = 10):
+        setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'maxLevels: "{max_levels}", '
+            f'maxIterations: {max_iterations}}}'
+        )
+        GraphAlgos.database.execute(f'CALL gds.louvain.write({setup})', 'w')
 
     def node2vec(self, write_property, embedding_dim = 100, iterations = 1, walk_length = 80,
                  walks_per_node = 10, window_size = 10, walk_buffer_size = 1000):
@@ -76,7 +93,7 @@ class GraphAlgos:
             f'maxIterations: {max_iterations}, '
             f'aggregator: "{aggregator}", '
             f'activationFunction: "{activation_function}", '
-            f'degreeAsProperty: True'
+             'degreeAsProperty: True'
         )
 
         # If the relationship weight property exists, then set it.
@@ -113,15 +130,6 @@ class GraphAlgos:
         setup += '}'
 
         GraphAlgos.database.execute(f'CALL gds.fastRP.write({setup})', 'w')
-
-    def nodeSimilarity(self, write_property, write_relationship, cutoff = 0.5, top_k = 10):
-        setup = (f'{self.graph_projection}, '
-            f'writeProperty: "{write_property}", '
-            f'writeRelationshipType: "{write_relationship}", '
-            f'similarityCutoff: {cutoff}, '
-            f'topK: {top_k}}}'
-        )
-        GraphAlgos.database.execute(f'CALL gds.nodeSimilarity.write({setup})', 'w')
 
     @staticmethod
     def get_embeddings(write_property):
