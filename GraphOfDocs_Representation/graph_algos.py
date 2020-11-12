@@ -57,10 +57,10 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.nodeSimilarity.write({setup})', 'w')
 
-    def louvain(self, write_property, write_relationship, max_levels = 10, max_iterations = 10):
+    def louvain(self, write_property, max_levels = 10, max_iterations = 10):
         setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
-            f'maxLevels: "{max_levels}", '
+            f'maxLevels: {max_levels}, '
             f'maxIterations: {max_iterations}}}'
         )
         GraphAlgos.database.execute(f'CALL gds.louvain.write({setup})', 'w')

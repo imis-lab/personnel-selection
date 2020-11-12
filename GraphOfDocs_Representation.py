@@ -1,9 +1,11 @@
 import sys
 import time
+import pickle
 from neo4j import ServiceUnavailable
 from GraphOfDocs_Representation.neo4j_wrapper import Neo4jDatabase
 from GraphOfDocs_Representation.graph_algos import GraphAlgos
 from GraphOfDocs_Representation.create import *
+from GraphOfDocs_Representation.select import *
 
 def graphofdocs(create, initialize, dirpath):
     # Open the database.
@@ -37,6 +39,7 @@ def graphofdocs(create, initialize, dirpath):
         print(f'Created similarity graph in {end-start} sec')
 
     if initialize: # Run initialization functions.
+        # Calculate the word embeddings for the word similarity graph and write them to csv files.
         with GraphAlgos(database, 'Word', 'similar_w2v', 'Word', rel_weight = 'score') as graph:
             for dim in [100, 200, 300]:
                 # Generate the embeddings in the database.
@@ -55,6 +58,18 @@ def graphofdocs(create, initialize, dirpath):
                 graph.write_word_embeddings_to_csv(f'gs_weighted_{dim}', f'gs_weighted_{dim}.csv')
                 graph.write_word_embeddings_to_csv(f'fastrp_weighted_{dim}', f'fastrp_weighted_{dim}.csv')
 
+        # Construct the Issue similarity graph and calculate its communities.
+        with GraphAlgos(database, 'Issue', 'includes', 'Word') as graph:
+            graph.nodeSimilarity(write_property = 'score', write_relationship = 'is_similar', cutoff = 0.25, top_k = 1)
+        with GraphAlgos(database, 'Issue', 'is_similar', 'Issue') as graph:
+            graph.louvain(write_property = 'community')
+
+        # Save the n top terms of a community of similar document to a pickle.
+        for n in [5, 10, 15, 20, 25, 50, 100, 250, 500, 1000]:
+            x = get_communities_tags(database, top_terms = n)
+            tags = sum(x.values(), [])
+            with open(f'features_{n}.pkl', 'wb') as f:
+                pickle.dump(tags, f)
     database.close()
     return
 
