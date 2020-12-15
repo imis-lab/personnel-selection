@@ -4,26 +4,48 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--test-name', help='The name alias for this test', required=True, dest='TEST_NAME', type=str)
 parser.add_argument('--output-directory', help='The output directory', dest='OUTPUT_DIRECTORY', type=str, required=True)
 parser.add_argument('--print-on-screen', dest='PRINT_ON_SCREEN', action='store_true')
-parser.add_argument('--top-n-assignees', default=21, help='Top N assignees to be considered from the classifier', dest='TOP_N_ASSIGNEES', type=int)
+parser.add_argument('--top-n-assignees', default=21, help='Top N assignees to be considered from the classifier',
+                    dest='TOP_N_ASSIGNEES', type=int)
 parser.add_argument('--random-state', default=42, dest='RANDOM_STATE', type=int)
 parser.add_argument('--kfold-n-splits', default=10, help='The number of k fold splits', dest='KFOLD_N_SPLITS', type=int)
 parser.add_argument('--epochs', default=15, help='Number of epochs', dest='EPOCHS', type=int)
-parser.add_argument('--max-tokens', default=20000, help='The number of the most common words to be considered from the text tokenizer', dest='MAX_TOKENS', type=int)
-parser.add_argument('--output-sequence-length', default=100, help='Keep only the first N tokens of each text', dest='OUTPUT_SEQUENCE_LENGTH', type=int)
-parser.add_argument('--bow-model', help='If this flag is set, then build a simple BOW model without an embedding layer', dest='BOW_MODEL', action='store_true')
-parser.add_argument('--word2vec-model', help='If this flag is set, then build a neural network with an embedding layer', dest='WORD2VEC_MODEL', action='store_true')
-parser.add_argument('--keyed-vector', help='If this flag is set, then build a neural network with an embedding layer from a keyed vector object', dest='KEYED_VECTOR', action='store_true')
+parser.add_argument('--max-tokens', default=20000,
+                    help='The number of the most common words to be considered from the text tokenizer',
+                    dest='MAX_TOKENS', type=int)
+parser.add_argument('--output-sequence-length', default=100, help='Keep only the first N tokens of each text',
+                    dest='OUTPUT_SEQUENCE_LENGTH', type=int)
+parser.add_argument('--bow-model', help='If this flag is set, then build a simple BOW model without an embedding layer',
+                    dest='BOW_MODEL', action='store_true')
+parser.add_argument('--word2vec-model', help='If this flag is set, then build a neural network with an embedding layer',
+                    dest='WORD2VEC_MODEL', action='store_true')
+parser.add_argument('--keyed-vector',
+                    help='If this flag is set, then build a neural network with an embedding layer from a keyed vector object',
+                    dest='KEYED_VECTOR', action='store_true')
 parser.add_argument('--vectorizer-batch-size', default=200, dest='VECTORIZER_BATCH_SIZE', type=int)
 parser.add_argument('--train-batch-size', default=128, dest='TRAIN_BATCH_SIZE', type=int)
 
-parser.add_argument('--trainable-embedding', help='Define this option only when you use a model with an embedding layer', dest='TRAINABLE_EMBEDDING', action='store_true')
-parser.add_argument('--dense-layer-n-units', default=100, help='Define this option only when you use a model with an embedding layer', dest='DENSE_LAYER_N_UNITS', type=int)
-parser.add_argument('--embedding-dim', default=100, help='Define this option only when you use a model with an embedding layer', dest='EMBEDDING_DIM', type=int)
-parser.add_argument('--modelpath', default='', help='The embedding model path. Define this option only when you use a model with an embedding layer', dest='MODELPATH', type=str)
+parser.add_argument('--trainable-embedding',
+                    help='Define this option only when you use a model with an embedding layer',
+                    dest='TRAINABLE_EMBEDDING', action='store_true')
+parser.add_argument('--dense-layer-n-units', default=100,
+                    help='Define this option only when you use a model with an embedding layer',
+                    dest='DENSE_LAYER_N_UNITS', type=int)
+parser.add_argument('--embedding-dim', default=100,
+                    help='Define this option only when you use a model with an embedding layer', dest='EMBEDDING_DIM',
+                    type=int)
+parser.add_argument('--modelpath', default='',
+                    help='The embedding model path. Define this option only when you use a model with an embedding layer',
+                    dest='MODELPATH', type=str)
 
-parser.add_argument('--dense-first-layer-n-units-simple', default=100, help='Define this option only when you use a model without an embedding layer', dest='DENSE_FIRST_LAYER_N_UNITS_SIMPLE', type=int)
-parser.add_argument('--dense-second-layer-n-units-simple', default=50, help='Define this option only when you use a model without an embedding layer', dest='DENSE_SECOND_LAYER_N_UNITS_SIMPLE', type=int)
-parser.add_argument('--output-mode', default='count', help='Define this option only when you use a model without an embedding layer', dest='OUTPUT_MODE', type=str)
+parser.add_argument('--dense-first-layer-n-units-simple', default=100,
+                    help='Define this option only when you use a model without an embedding layer',
+                    dest='DENSE_FIRST_LAYER_N_UNITS_SIMPLE', type=int)
+parser.add_argument('--dense-second-layer-n-units-simple', default=50,
+                    help='Define this option only when you use a model without an embedding layer',
+                    dest='DENSE_SECOND_LAYER_N_UNITS_SIMPLE', type=int)
+parser.add_argument('--output-mode', default='count',
+                    help='Define this option only when you use a model without an embedding layer', dest='OUTPUT_MODE',
+                    type=str)
 
 args = parser.parse_args()
 if args.BOW_MODEL is False and args.MODELPATH == '':
@@ -61,6 +83,7 @@ OUTPUT_MODE = args.OUTPUT_MODE
 
 import os
 import sys
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import shutil
 
@@ -83,6 +106,7 @@ from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 import matplotlib.pyplot as plt
 
+
 def load_word_vector_and_vocabulary(modelpath, word2vec_model, keyed_vector):
     if word2vec_model is True:
         if keyed_vector is False:
@@ -98,6 +122,7 @@ def load_word_vector_and_vocabulary(modelpath, word2vec_model, keyed_vector):
         word_vectors = {idx: eval(word_vectors[idx]) for idx in word_vectors.keys()}
         embedding_vocabulary = list(word_vectors.keys())
         return word_vectors, embedding_vocabulary
+
 
 def generate_model_with_embedding(train_samples, word_vectors, embedding_vocabulary, class_names, features=None):
     print('# Run generate_model_with_embedding function #')
@@ -146,17 +171,18 @@ def generate_model_with_embedding(train_samples, word_vectors, embedding_vocabul
     )
 
     model = tf.keras.models.Sequential([
-         tf.keras.Input(shape=(1,), dtype=tf.string),
-         vectorizer,
-         embedding_layer,
-         tf.keras.layers.Dense(DENSE_LAYER_N_UNITS, activation='relu'),
-         tf.keras.layers.Dropout(0.5),
-         tf.keras.layers.GlobalMaxPool1D(),
-         tf.keras.layers.Dense(len(class_names), activation='softmax'),
+        tf.keras.Input(shape=(1,), dtype=tf.string),
+        vectorizer,
+        embedding_layer,
+        tf.keras.layers.Dense(DENSE_LAYER_N_UNITS, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.GlobalMaxPool1D(),
+        tf.keras.layers.Dense(len(class_names), activation='softmax'),
     ])
 
     model.summary()
     return model
+
 
 def generate_model_without_embedding(train_samples, class_names):
     print('# Run generate_model_without_embedding function #')
@@ -175,6 +201,7 @@ def generate_model_without_embedding(train_samples, class_names):
     model.summary()
     return model
 
+
 def prepare_array_for_plotting(array):
     arr = np.array(array)
     min_per_epoch = arr.min(axis=0)
@@ -184,6 +211,7 @@ def prepare_array_for_plotting(array):
     y = mean_per_epoch
     yerr = np.array([np.abs(mean_per_epoch - min_per_epoch), np.abs(max_per_epoch - mean_per_epoch)])
     return x, y, yerr
+
 
 def plot(first_arr, first_label, second_arr, second_label, ylabel, position='lower right', output_file='output.pdf'):
     plt.figure()
@@ -198,6 +226,7 @@ def plot(first_arr, first_label, second_arr, second_label, ylabel, position='low
     plt.savefig(f'{OUTPUT_DIRECTORY}/{output_file}', bbox_inches='tight', pad_inches=None)
     if PRINT_ON_SCREEN:
         plt.show()
+
 
 def main(test_name):
     if os.path.exists(OUTPUT_DIRECTORY):
@@ -260,13 +289,16 @@ def main(test_name):
         if BOW_MODEL is True:
             model = generate_model_without_embedding(train_samples, class_names)
         else:
-            model = generate_model_with_embedding(train_samples, word_vectors, embedding_vocabulary, class_names, features)
+            model = generate_model_with_embedding(train_samples, word_vectors, embedding_vocabulary, class_names,
+                                                  features)
         model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['acc'])
         x_train = train_samples
         x_val = val_samples
         y_train = train_labels
         y_val = val_labels
-        history = model.fit(x_train, y_train, batch_size=TRAIN_BATCH_SIZE, steps_per_epoch=len(x_train)//TRAIN_BATCH_SIZE, epochs=EPOCHS, validation_data=(x_val, y_val))
+        history = model.fit(x_train, y_train, batch_size=TRAIN_BATCH_SIZE,
+                            steps_per_epoch=len(x_train) // TRAIN_BATCH_SIZE, epochs=EPOCHS,
+                            validation_data=(x_val, y_val))
 
         history = history.history
         histories.append(history)
@@ -327,6 +359,7 @@ def main(test_name):
 
     if PRINT_ON_SCREEN is False:
         sys.stdout.close()
+
 
 if __name__ == '__main__':
     main(TEST_NAME)
