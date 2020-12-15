@@ -40,12 +40,12 @@ def convert_csv_to_json_dataset(input_filename: str, output_filename: str):
     a json-like dict object, which is written into a file.
     """
 
-    csv = pandas.read_csv(r'C:\Users\USER\Desktop\issues.csv') \
+    csv = pandas.read_csv(r'test.csv') \
                 .drop('index', axis = 1).to_dict('index')
 
     json_object = {'issues': [val for val in csv.values()]}
 
-    with open(r'C:\Users\USER\Desktop\issues.json', 'w',
+    with open(r'test.json', 'w',
         encoding = 'utf-8-sig', errors = 'ignore') as file:
         file.write(json.dumps(json_object, indent = 4, separators = (',', ': ')))
 
