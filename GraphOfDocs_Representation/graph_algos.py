@@ -1,6 +1,7 @@
+import time
+import json
 import traceback
 import numpy as np
-import time
 
 from statistics import mean
 from sklearn import preprocessing
@@ -15,40 +16,60 @@ class GraphAlgos:
     """
     database = None # Static variable shared across objects.
 
-    def __init__(self, database, graph, start, relationship, end = None, property = None):
+    def __init__(self, database, start, relationship, end = None, orientation = 'NATURAL', rel_weight = None):
         # Initialize the static variable and class member.
         if GraphAlgos.database is None:
             GraphAlgos.database = database
-        self.graph = graph
+        
+        # Initialize the optional parameter.
+        end = end if end is not None else start
 
-        # Initialize the optional arguments.
-        rel_properties = (None if property is None
-                          else f'{{relationshipProperties: "{property}"}}')
-        end = start if end is None else end
-
-        # Setup the graph parameters.
-        graph_setup = (
-            f'"{self.graph}", ["{start}", "{end}"], "{relationship}"'
+        # Construct the projection of the anonymous graph.
+        self.graph_projection = (
+            f'{{nodeProjection: ["{start}", "{end}"], '
+             'relationshipProjection: {'
+            f'{relationship}: {{'
+            f'type: "{relationship}", '
+            f'orientation: "{orientation}"'
         )
-        if rel_properties is not None:
-            graph_setup = ', '.join((graph_setup, rel_properties))
+        
+        # If the relationship weight property exists, then set it. 
+        if rel_weight is not None:
+            self.graph_projection += f', properties: "{rel_weight}"'
 
-        # Create the graph.
-        GraphAlgos.database.execute(f'CALL gds.graph.create({graph_setup})', 'w')
+        # Add two right brackets to complete the query.
+        self.graph_projection += '}}'
 
     def pagerank(self, write_property, max_iterations = 20, damping_factor = 0.85):
-        setup = (f'"{self.graph}", {{ '
+        setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
             f'maxIterations: {max_iterations}, '
             f'dampingFactor: {damping_factor}}}'
         )
         GraphAlgos.database.execute(f'CALL gds.pageRank.write({setup})', 'w')
 
-    def node2vec(self, write_property, embedding_size = 128, iterations = 1, walk_length = 80,
-                 walks_per_node = 10, window_size = 10, walk_buffer_size = 1000):
-        setup = (f'"{self.graph}", {{ '
+    def nodeSimilarity(self, write_property, write_relationship, cutoff = 0.5, top_k = 10):
+        setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
-            f'embeddingSize: {embedding_size}, '
+            f'writeRelationshipType: "{write_relationship}", '
+            f'similarityCutoff: {cutoff}, '
+            f'topK: {top_k}}}'
+        )
+        GraphAlgos.database.execute(f'CALL gds.nodeSimilarity.write({setup})', 'w')
+
+    def louvain(self, write_property, max_levels = 10, max_iterations = 10):
+        setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'maxLevels: {max_levels}, '
+            f'maxIterations: {max_iterations}}}'
+        )
+        GraphAlgos.database.execute(f'CALL gds.louvain.write({setup})', 'w')
+
+    def node2vec(self, write_property, embedding_dim = 100, iterations = 1, walk_length = 80,
+                 walks_per_node = 10, window_size = 10, walk_buffer_size = 1000):
+        setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'embeddingDimension: {embedding_dim}, '
             f'iterations: {iterations}, '
             f'walkLength: {walk_length}, '
             f'walksPerNode: {walks_per_node}, '
@@ -57,29 +78,58 @@ class GraphAlgos:
         )
         GraphAlgos.database.execute(f'CALL gds.alpha.node2vec.write({setup})', 'w')
 
-    def graphSage(self, write_property, embedding_size = 64, epochs = 1, max_iterations = 10,
-                  aggregator = 'mean', activation_function = 'sigmoid', degree_as_property = True):
-        setup = (f'"{self.graph}", {{ '
-            f'writeProperty: "{write_property}", '
-            f'embeddingSize: {embedding_size}, '
+    def graphSage(self, write_property, rel_weight = None, embedding_dim = 64, epochs = 1,
+                  max_iterations = 10, aggregator = 'mean', activation_function = 'sigmoid'):
+
+        # The community edition of the Neo4j Graph Data Science Library allows only one model to be stored in the database.
+        model_exists = GraphAlgos.database.execute('CALL gds.beta.model.exists("graphSage") YIELD exists', 'r')[0][0]
+        if model_exists: # then drop the model from the database.
+            GraphAlgos.database.execute('CALL gds.beta.model.drop("graphSage")', 'r')
+
+        train_setup = (f'{self.graph_projection}, '
+            f'embeddingDimension: {embedding_dim}, '
             f'epochs: {epochs}, '
+            f'modelName: "graphSage", '
             f'maxIterations: {max_iterations}, '
             f'aggregator: "{aggregator}", '
             f'activationFunction: "{activation_function}", '
-            f'degreeAsProperty: {degree_as_property}}}'
+             'degreeAsProperty: True'
         )
-        GraphAlgos.database.execute(f'CALL gds.alpha.graphSage.write({setup})', 'w')
 
-    def randomProjection(self, write_property, embedding_size = 10, max_iterations = 10,
-                         sparsity = 3, normalize_l2 = False):
-        setup = (f'"{self.graph}", {{ '
+        # If the relationship weight property exists, then set it.
+        if rel_weight is not None:
+            train_setup += f', relationshipWeightProperty: "{rel_weight}"'
+
+        # Add a right bracket to complete the query.
+        train_setup += '}' 
+
+        write_setup = (f'{self.graph_projection}, '
             f'writeProperty: "{write_property}", '
-            f'embeddingSize: {embedding_size}, '
-            f'maxIterations: {max_iterations}, '
-            f'sparsity: {sparsity}, '
-            f'normalizeL2: {normalize_l2}}}'
+            f'modelName: "graphSage"}}'
         )
-        GraphAlgos.database.execute(f'CALL gds.alpha.randomProjection.write({setup})', 'w')
+
+        GraphAlgos.database.execute(f'CALL gds.beta.graphSage.train({train_setup})', 'w')
+        GraphAlgos.database.execute(f'CALL gds.beta.graphSage.write({write_setup})', 'w')
+
+    def fastRP(self, write_property, rel_weight = None, embedding_dim = 100, iterations = 10):
+        # Construct the iteration weights vector,  its first element is 0.0 and the rest are 1.0.
+        # The length of the vector determines the amount of iterations by the algorithm.
+        iteration_weights = [0.0] + [1.0] * (iterations - 1)
+
+        setup = (f'{self.graph_projection}, '
+            f'writeProperty: "{write_property}", '
+            f'embeddingDimension: {embedding_dim}, '
+            f'iterationWeights: {iteration_weights}'
+        )
+
+        # If the relationship weight property exists, then set it.
+        if rel_weight is not None:
+            setup += f', relationshipWeightProperty: "{rel_weight}"'
+
+        # Add a right bracket to complete the query.
+        setup += '}'
+
+        GraphAlgos.database.execute(f'CALL gds.fastRP.write({setup})', 'w')
 
     @staticmethod
     def get_embeddings(write_property):
@@ -91,35 +141,15 @@ class GraphAlgos:
         return GraphAlgos.database.execute(query, 'r')
 
     @staticmethod
-    def calc_avg_embedding(write_property):
+    def write_word_embeddings_to_csv(write_property, filepath):
         query = (
-            'MATCH (i:Issue)-[:includes]->(w:Word) '
-            f'RETURN i.key, COLLECT(w.{write_property})'
-            )
-        issues_avg_embeddings = [
-            [row[0], list(map(mean, zip(*row[1])))]
-            for row in GraphAlgos.database.execute(query, 'r')
-        ]
-        start = time.perf_counter()
-        for [issue, avg_embedding] in issues_avg_embeddings:
-            query = (
-                f'MATCH (i:Issue {{key: "{issue}"}}) '
-                f'SET i.{write_property} = {avg_embedding}'
-            )
-            GraphAlgos.database.execute(query, 'w')
-        end = time.perf_counter()
-        print(f'For loop {end-start} sec')
-
-    @staticmethod
-    def write_embeddings_to_csv(write_property, filepath):
-        query = (
-            f'MATCH (w:Word) WHERE EXISTS(w.{write_property}) RETURN w.key, w.{write_property}'
+            f'MATCH (w:Word) WHERE EXISTS(w.{write_property}) '
+            f'RETURN w.key, w.{write_property}'
         )
-        labels, embeddings = map(list, zip(*GraphAlgos.database.execute(query, 'r')))
-       
         with open(filepath, 'w', encoding = 'utf-8-sig', errors = 'ignore') as file:
-            for label, embedding in zip(labels, embeddings):
-                file.write(f'{label}, {embedding}\n')
+            file.write('idx,word,embedding\n')
+            for i, (word, embedding) in enumerate(GraphAlgos.database.execute(query, 'r')):
+                file.write(f'{i},{word},"{embedding}"\n')
 
     @staticmethod
     def train_classifier(embeddings):
@@ -153,4 +183,3 @@ class GraphAlgos:
     def __exit__(self, exc_type, exc_value, tb):
         if exc_type is not None:
             traceback.print_exception(exc_type, exc_value, tb)
-        GraphAlgos.database.execute(f'CALL gds.graph.drop("{self.graph}")', 'w')
