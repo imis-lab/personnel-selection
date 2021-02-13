@@ -40,7 +40,7 @@ def graphofdocs(create, initialize, dirpath):
 
     if initialize: # Run initialization functions.
         # Calculate the word embeddings for the word similarity graph and write them to csv files.
-        with GraphAlgos(database, 'Word', 'similar_w2v', 'Word', rel_weight = 'score') as graph:
+        with GraphAlgos(database, ['Word'], [('similar_w2v', 'NATURAL', ['score'])]) as graph:
             for dim in [100, 200, 300]:
                 # Generate the embeddings in the database.
                 graph.graphSage(f'gs_{dim}', embedding_dim = dim)
@@ -59,9 +59,9 @@ def graphofdocs(create, initialize, dirpath):
                 graph.write_word_embeddings_to_csv(f'fastrp_weighted_{dim}', f'fastrp_weighted_{dim}.csv')
 
         # Construct the Issue similarity graph and calculate its communities.
-        with GraphAlgos(database, 'Issue', 'includes', 'Word') as graph:
+        with GraphAlgos(database, ['Issue', 'Word'], ['includes']) as graph:
             graph.nodeSimilarity(write_property = 'score', write_relationship = 'is_similar', cutoff = 0.25, top_k = 1)
-        with GraphAlgos(database, 'Issue', 'is_similar', 'Issue') as graph:
+        with GraphAlgos(database, ['Issue'], ['is_similar']) as graph:
             graph.louvain(write_property = 'community')
 
         # Save the n top terms of a community of similar document to a pickle.

@@ -16,29 +16,26 @@ class GraphAlgos:
     """
     database = None # Static variable shared across objects.
 
-    def __init__(self, database, start, relationship, end = None, orientation = 'NATURAL', rel_weight = None):
+    def __init__(self, database, node_list, rel_list, orientation = "NATURAL"):
         # Initialize the static variable and class member.
         if GraphAlgos.database is None:
             GraphAlgos.database = database
-        
-        # Initialize the optional parameter.
-        end = end if end is not None else start
+
+        # Construct the relationship string.
+        if type(rel_list[0]) is str:
+            rel_string = ', '.join(
+                (f'{rel}: {{type: "{rel}", orientation: "{orientation}"}}')
+                for rel in rel_list)
+        else:
+            rel_string = ', '.join(
+                (f'{rel[0]}: {{type: "{rel[0]}", orientation: "{rel[1]}", properties: {rel[2]}}}')
+                for rel in rel_list)
 
         # Construct the projection of the anonymous graph.
         self.graph_projection = (
-            f'{{nodeProjection: ["{start}", "{end}"], '
-             'relationshipProjection: {'
-            f'{relationship}: {{'
-            f'type: "{relationship}", '
-            f'orientation: "{orientation}"'
+            f'{{nodeProjection: {node_list}, '
+            f'relationshipProjection: {{{rel_string}}}'
         )
-        
-        # If the relationship weight property exists, then set it. 
-        if rel_weight is not None:
-            self.graph_projection += f', properties: "{rel_weight}"'
-
-        # Add two right brackets to complete the query.
-        self.graph_projection += '}}'
 
     def pagerank(self, write_property, max_iterations = 20, damping_factor = 0.85):
         setup = (f'{self.graph_projection}, '
