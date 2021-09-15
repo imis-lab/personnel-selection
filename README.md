@@ -28,8 +28,8 @@ clone the project to a local folder and install the necessary `Python` libraries
 ```bash
 sudo apt install python3.6
 sudo apt install git-all
-git clone https://github.com/NC0DER/GraphOfDocs_Representation
-cd GraphOfDocs
+git clone https://github.com/imis-lab/personnel-selection
+cd personnel-selection
 pip3 install -r requirements.txt
 ```
 *\* Optionally you could create a virtual environment first,*  
@@ -53,9 +53,6 @@ Once it's done, the database is initialized and ready for use.
 You could use the `Neo4j Browser` to run your queries, 
 or for large queries you could use the custom visualization tool  
 `visualize.html` which is located in the `GraphOfDocs_Representation` Subdirectory.
-
-## Citation
-You can find the bibtex in [this link](), should you want to cite this paper.
 
 ## Contributors
 * Nikolaos Giarelis (giarelis@ceid.upatras.gr)
