@@ -1,4 +1,4 @@
-# Code for Journal - GraphOfDocs Representation
+# Code for the paper 'Making personnel selection smarter through wordembeddings: A graph-based approach'
 
 This repository hosts code for the papers:
 * []() - [Download]()
