@@ -104,7 +104,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
-import matplotlib.pyplot as plt
 
 
 def load_word_vector_and_vocabulary(modelpath, word2vec_model, keyed_vector):
@@ -200,32 +199,6 @@ def generate_model_without_embedding(train_samples, class_names):
     ])
     model.summary()
     return model
-
-
-def prepare_array_for_plotting(array):
-    arr = np.array(array)
-    min_per_epoch = arr.min(axis=0)
-    max_per_epoch = arr.max(axis=0)
-    mean_per_epoch = arr.mean(axis=0)
-    x = np.array(list(range(1, arr.shape[1] + 1)))
-    y = mean_per_epoch
-    yerr = np.array([np.abs(mean_per_epoch - min_per_epoch), np.abs(max_per_epoch - mean_per_epoch)])
-    return x, y, yerr
-
-
-def plot(first_arr, first_label, second_arr, second_label, ylabel, position='lower right', output_file='output.pdf'):
-    plt.figure()
-    x, y, yerr = prepare_array_for_plotting(first_arr)
-    plt.errorbar(x, y, yerr=yerr, label=first_label)
-    x, y, yerr = prepare_array_for_plotting(second_arr)
-    plt.errorbar(x, y, yerr=yerr, label=second_label)
-    plt.xlabel('epochs')
-    plt.ylabel(ylabel)
-    plt.xticks(x)
-    plt.legend(loc=position)
-    plt.savefig(f'{OUTPUT_DIRECTORY}/{output_file}', bbox_inches='tight', pad_inches=None)
-    if PRINT_ON_SCREEN:
-        plt.show()
 
 
 def main(test_name):
@@ -348,14 +321,6 @@ def main(test_name):
     print(f'Average f1 score: {np.average(f1_scores)}')
     print(f'Average train loss: {np.average(train_losses)}')
     print(f'Average validation loss: {np.average(val_losses)}')
-
-    # Plotting data.
-    train_losses = [history['loss'] for history in histories]
-    train_accuracies = [history['acc'] for history in histories]
-    val_losses = [history['val_loss'] for history in histories]
-    val_accuracies = [history['val_acc'] for history in histories]
-    plot(train_accuracies, 'train acc', val_accuracies, 'val acc', 'accuracy', 'lower right', 'accuracies.pdf')
-    plot(train_losses, 'train loss', val_losses, 'val loss', 'loss', 'upper right', 'losses.pdf')
 
     if PRINT_ON_SCREEN is False:
         sys.stdout.close()

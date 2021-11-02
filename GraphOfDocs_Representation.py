@@ -65,7 +65,7 @@ def graphofdocs(create, initialize, dirpath):
             graph.louvain(write_property = 'community')
 
         # Save the n top terms of a community of similar document to a pickle.
-        for n in [5, 10, 15, 20, 25, 50, 100, 250, 500, 1000]:
+        for n in [250]:
             x = get_communities_tags(database, top_terms = n)
             tags = sum(x.values(), [])
             with open(f'features_{n}.pkl', 'wb') as f:
